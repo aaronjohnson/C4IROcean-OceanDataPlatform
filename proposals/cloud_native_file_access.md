@@ -133,7 +133,19 @@ ds = xr.open_dataset(assets['data']['href'])
 - Some TABULAR datasets are "hidden" from STAC but work via SDK
 - Need to know the UUID to access tabular data directly
 
-**Question:** Is this intentional? Should STAC expose both UUIDs, or link them?
+**Investigation Result:**
+```
+STAC catalog: 35 collections, 0 TABULAR (all FILE)
+Hidden UUID:  PGS Biota TABULAR works (2,241 rows)
+```
+
+**Conclusion:** TABULAR datasets are NOT discoverable via STAC. They exist but require knowing the UUID directly.
+
+**Questions:**
+1. Is this intentional design or a gap?
+2. How can users discover available TABULAR datasets?
+3. Should STAC link FILE and TABULAR UUIDs for same data?
+4. Is there an API to list all TABULAR datasets?
 
 ### Inconsistent Dataset Type Detection
 
