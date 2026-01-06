@@ -119,6 +119,22 @@ ds = xr.open_dataset(assets['data']['href'])
 
 ## Related Issues
 
+### Discovery: Dual UUIDs for Same Data (TABULAR vs FILE)
+
+**Finding:** The same dataset can have two UUIDs with different access patterns:
+
+| UUID | STAC Visible | SDK Access | Type |
+|------|--------------|------------|------|
+| `1d801817-742b-4867-82cf-5597673524eb` | No (404) | Yes | TABULAR (2,241 rows) |
+| `b960c80e-7ead-47af-b6c8-e92a9b5ac659` | Yes | Yes | FILE (0 files) |
+
+**Implication:**
+- STAC catalog discovery may not find all accessible datasets
+- Some TABULAR datasets are "hidden" from STAC but work via SDK
+- Need to know the UUID to access tabular data directly
+
+**Question:** Is this intentional? Should STAC expose both UUIDs, or link them?
+
 ### Inconsistent Dataset Type Detection
 
 Some datasets appear empty via SDK but have data in STAC:
