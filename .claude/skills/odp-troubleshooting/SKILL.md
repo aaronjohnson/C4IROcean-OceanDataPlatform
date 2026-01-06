@@ -80,7 +80,7 @@ for name, asset in assets.items():
     print(f"{name}: {asset.get('href')}")
 ```
 
-**Discussion:** See `proposals/sdk_api_improvements.md` for feature request.
+**Discussion:** See `proposals/cloud_native_file_access.md` for feature request.
 
 ### Issue: Import Errors for Optional Packages
 
