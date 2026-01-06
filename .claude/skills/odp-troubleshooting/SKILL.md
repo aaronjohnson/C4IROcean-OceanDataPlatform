@@ -13,7 +13,10 @@ allowed-tools: Read, Grep, WebFetch
 **Causes:**
 - Collection ID is incorrect or outdated
 - Collection was removed or renamed
+- **Dataset UUID changed** (observed: PGS Biota UUID changed during active use)
 - Typo in UUID
+
+**Note:** Dataset UUIDs can change unexpectedly. Always verify UUIDs against current STAC catalog before hardcoding.
 
 **Solution:**
 ```python
@@ -23,8 +26,11 @@ try:
 except requests.HTTPError as e:
     if e.response.status_code == 404:
         print(f"Collection not found: {collection_id}")
-        # Fall back to discovery
+        # Fall back to discovery - search by title
         collections = stac_get("/collections")['collections']
+        for c in collections:
+            if 'biota' in c.get('title', '').lower():
+                print(f"Found: {c['id']} - {c['title']}")
 ```
 
 ### Issue: Dataset Shows as FILE When Expected TABULAR
@@ -54,7 +60,8 @@ if schema is None:
 - GEBCO (`5070af58-6d8a-4636-a6a0-8ca9298fb3ab`) - shows as FILE
 
 **Known working TABULAR datasets:**
-- PGS Biota (`1d801817-742b-4867-82cf-5597673524eb`) - 2,241 rows
+- PGS Brazil Biota (`b960c80e-7ead-47af-b6c8-e92a9b5ac659`) - marine mammals/turtles
+  - Note: Previously `1d801817-742b-4867-82cf-5597673524eb` (UUID changed 2026-01)
 
 ### Issue: FILE Dataset Returns 0 Files
 
