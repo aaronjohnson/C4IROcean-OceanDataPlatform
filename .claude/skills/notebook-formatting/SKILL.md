@@ -87,3 +87,54 @@ Always link to the next notebook(s) in sequence:
 - **03_data_pipeline.ipynb**: Ingest files and transform into tabular data
 - **04_multi_dataset_join.ipynb**: Combine multiple datasets for analysis
 ```
+
+### Intro Cell Template
+
+```markdown
+# Notebook Title
+
+This notebook demonstrates [brief description].
+
+**What you'll learn:**
+- First learning objective
+- Second learning objective
+- Third learning objective
+
+**Prerequisites:**
+- Running in ODP Workspace (auto-authenticated)
+- Completed previous tutorials (if applicable)
+```
+
+### Images in Notebooks
+
+Store images in `tutorials/images/` and reference with relative paths:
+```markdown
+![Alt text](images/filename.png)
+```
+
+### Interactive Input Pattern
+
+For user-provided values (like dataset UUIDs):
+```python
+DATASET_ID = input("Enter your dataset UUID: ").strip()
+
+if not DATASET_ID:
+    raise ValueError("Dataset UUID is required")
+```
+
+### Ingest Mode Reference Table
+
+Include in data pipeline notebooks:
+```markdown
+| Mode | Behavior | Use Case |
+|------|----------|----------|
+| `drop` | Delete table, recreate from file | First load, schema changes |
+| `truncate` | Clear rows, keep schema | Replace all data |
+| `append` | Add rows to existing | Incremental updates |
+```
+
+### Code Cell Comments
+
+- Keep comments concise
+- Explain "why" not "what"
+- Use print statements to show progress to users
