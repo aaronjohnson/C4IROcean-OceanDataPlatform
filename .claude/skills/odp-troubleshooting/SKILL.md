@@ -56,6 +56,32 @@ if schema is None:
 **Known working TABULAR datasets:**
 - PGS Biota (`1d801817-742b-4867-82cf-5597673524eb`) - 2,241 rows
 
+### Issue: FILE Dataset Returns 0 Files
+
+**Symptom:** `dataset.files.list()` returns empty list for datasets visible in STAC catalog
+
+**Causes:**
+- Dataset metadata is public via STAC, but file access requires permissions
+- Dataset uses different access pattern (e.g., direct download links in STAC assets)
+- Files may be stored externally and only referenced by metadata
+
+**Observed behavior:**
+```
+GLODAP, GEBCO, AkerBP Metocean - all return 0 files via SDK
+despite being visible in STAC catalog with metadata
+```
+
+**Workaround:**
+```python
+# Check STAC assets for direct download links
+coll = stac_get(f"/collections/{dataset_id}")
+assets = coll.get('assets', {})
+for name, asset in assets.items():
+    print(f"{name}: {asset.get('href')}")
+```
+
+**Discussion:** See `proposals/sdk_api_improvements.md` for feature request.
+
 ### Issue: Import Errors for Optional Packages
 
 **Symptom:** `ModuleNotFoundError: No module named 'folium'`
