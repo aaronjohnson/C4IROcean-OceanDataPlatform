@@ -79,6 +79,43 @@ ensure_package("folium")
 ensure_package("h3")
 ```
 
+### Issue: h3 Library Version Mismatch (v3 vs v4 API)
+
+**Symptom:** `AttributeError: module 'h3' has no attribute 'latlng_to_cell'`
+
+**Cause:** ODP Workspace has h3 v3.x pre-installed. Even after `pip install h3`, the old version may persist because:
+- Pip doesn't upgrade if any version exists
+- Python caches the already-imported module
+- Need kernel restart to pick up new version
+
+**Solution 1:** Version-agnostic wrapper functions
+```python
+def get_h3_cell(lat, lon, res):
+    try:
+        return h3.latlng_to_cell(lat, lon, res)  # v4+ API
+    except AttributeError:
+        return h3.geo_to_h3(lat, lon, res)  # v3 API
+
+def get_h3_boundary(hex_id):
+    try:
+        return h3.cell_to_boundary(hex_id)  # v4+ API
+    except AttributeError:
+        return h3.h3_to_geo_boundary(hex_id, geo_json=False)  # v3 API
+```
+
+**Solution 2:** Force upgrade and restart kernel
+```python
+!pip install --upgrade --force-reinstall h3
+# Then: Kernel → Restart Kernel
+```
+
+**API differences:**
+| v3 API | v4 API |
+|--------|--------|
+| `h3.geo_to_h3(lat, lon, res)` | `h3.latlng_to_cell(lat, lon, res)` |
+| `h3.h3_to_geo_boundary(hex)` | `h3.cell_to_boundary(hex)` |
+| `h3.h3_to_parent(hex, res)` | `h3.cell_to_parent(hex, res)` |
+
 ### Issue: H3 Server-Side Aggregation Fails
 
 **Symptom:** `aggregate()` with H3 group_by raises error
