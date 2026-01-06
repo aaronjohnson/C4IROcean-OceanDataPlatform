@@ -38,6 +38,7 @@ This repository includes [Claude Code](https://claude.ai/code) skills for AI-ass
 | `odp-dataset-patterns` | Tabular/file detection, upload, H3 aggregation |
 | `stac-api-reference` | STAC endpoints, search params, GeoJSON |
 | `odp-troubleshooting` | Common issues and solutions |
+| `proposal-writing` | When and how to write discussion proposals |
 
 Location: `.claude/skills/`
 
