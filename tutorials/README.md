@@ -9,7 +9,7 @@ These notebooks demonstrate real-world analysis workflows on the Ocean Data Plat
 | [01_catalog_discovery.ipynb](01_catalog_discovery.ipynb) | Programmatically discover datasets using the STAC API |
 | [02_geospatial_analysis.ipynb](02_geospatial_analysis.ipynb) | Query and visualize data with H3 hexagonal aggregation |
 | [03_data_pipeline.ipynb](03_data_pipeline.ipynb) | Ingest files and transform into tabular data |
-| 04_multi_dataset_join.ipynb | Combine multiple datasets for analysis *(coming soon)* |
+| [04_multi_dataset_join.ipynb](04_multi_dataset_join.ipynb) | Combine multiple datasets for analysis |
 
 ## Prerequisites
 
