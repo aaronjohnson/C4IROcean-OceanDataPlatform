@@ -116,29 +116,49 @@ def get_h3_boundary(hex_id):
 | `h3.h3_to_geo_boundary(hex)` | `h3.cell_to_boundary(hex)` |
 | `h3.h3_to_parent(hex, res)` | `h3.cell_to_parent(hex, res)` |
 
-### Issue: H3 Server-Side Aggregation Fails
+### Issue: Aggregation "Field * not in schema" Error
 
-**Symptom:** `aggregate()` with H3 group_by raises error
+**Symptom:** `aggregate()` returns error: `{"error": "Field * not in the schema"}`
 
-**Solution:** Fall back to client-side
+**Cause:** ODP API doesn't support `"*": "count"` syntax for counting rows.
+
+**Solution:** Use a specific column name instead of `"*"`:
 ```python
-try:
-    h3_agg = dataset.table.aggregate(
-        group_by=f"h3({geometry_col}, {resolution})",
-        aggr={"*": "count"}
-    )
-except Exception as e:
-    print(f"Server-side H3 failed: {e}")
-    print("Using client-side aggregation...")
+# Wrong - doesn't work
+aggr={"*": "count"}
 
-    import h3
-    df['h3_index'] = df.apply(
-        lambda row: h3.latlng_to_cell(row['lat'], row['lon'], resolution)
-        if pd.notna(row['lat']) else None,
-        axis=1
-    )
-    h3_agg = df.groupby('h3_index').size().reset_index(name='count')
+# Correct - use actual column name
+aggr={"occurrenceID": "count"}
+
+# Result column will be named "count_occurrenceID"
+df.sort_values('count_occurrenceID', ascending=False)
 ```
+
+### Issue: H3 Server-Side Aggregation Returns Indices
+
+**Symptom:** `aggregate()` with H3 group_by returns integers instead of H3 hex strings
+
+**Cause:** ODP API returns internal indices, not standard H3 cell IDs. This makes results incompatible with visualization libraries.
+
+**Solution:** Use client-side H3 aggregation until server-side is fixed:
+```python
+import h3
+
+def get_h3_cell(lat, lon, res):
+    try:
+        return h3.latlng_to_cell(lat, lon, res)  # v4+ API
+    except AttributeError:
+        return h3.geo_to_h3(lat, lon, res)  # v3 API
+
+df['h3_cell'] = df.apply(
+    lambda row: get_h3_cell(row['lat'], row['lon'], resolution)
+    if pd.notna(row['lat']) else None,
+    axis=1
+)
+h3_agg = df.groupby('h3_cell').size().reset_index(name='count')
+```
+
+See `proposals/server_side_h3_aggregation.md` for discussion.
 
 ### Issue: Query Returns Empty Results
 

@@ -88,6 +88,23 @@ print(f"Dtypes:\n{h3_server.dtypes}")
 print(f"Sample values: {h3_server.iloc[:5, 0].tolist()}")
 ```
 
+## Related Issue: Count Aggregation Syntax
+
+While investigating H3 aggregation, we also discovered that `"*": "count"` syntax is not supported:
+
+```python
+# This fails with "Field * not in the schema"
+aggr={"*": "count"}
+
+# This works - requires specific column name
+aggr={"occurrenceID": "count"}
+```
+
+**Discussion**: Standard SQL supports `COUNT(*)` for row counting. Supporting `"*": "count"` would:
+- Match user expectations from SQL
+- Avoid requiring knowledge of column names for simple counts
+- Simplify aggregation queries
+
 ## Questions for Discussion
 
 1. **Index mapping**: Is there a way to map the returned indices back to H3 cell IDs? Perhaps via a separate API call or lookup table?
@@ -100,6 +117,8 @@ print(f"Sample values: {h3_server.iloc[:5, 0].tolist()}")
 3. **Performance trade-off**: Are indices used for internal efficiency? Would returning hex strings impact query performance?
 
 4. **Roadmap**: Is native H3 hex string support planned for a future SDK version?
+
+5. **COUNT(*) support**: Could `"*": "count"` be supported to match SQL `COUNT(*)` semantics?
 
 ## Proposed Solutions
 
