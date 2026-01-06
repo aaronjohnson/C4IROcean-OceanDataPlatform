@@ -16,7 +16,17 @@ allowed-tools: Read, Grep, WebFetch
 - **Dataset UUID changed** (observed: PGS Biota UUID changed during active use)
 - Typo in UUID
 
-**Note:** Dataset UUIDs can change unexpectedly. Always verify UUIDs against current STAC catalog before hardcoding.
+**Best Practice:** Avoid hardcoding UUIDs - discover datasets by title instead:
+```python
+def find_dataset_by_title(search_term):
+    response = requests.get(f"{STAC_BASE_URL}/collections")
+    collections = response.json().get('collections', [])
+    return [c for c in collections
+            if search_term.lower() in c.get('title', '').lower()]
+
+matches = find_dataset_by_title("biota")
+DATASET_ID = matches[0]['id'] if matches else None
+```
 
 **Solution:**
 ```python
