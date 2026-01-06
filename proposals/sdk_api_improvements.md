@@ -1,4 +1,4 @@
-# Proposal: SDK and API Improvements
+# Proposal: Cloud-Native Data Access in ODP Workspace
 
 **Status:** Discussion
 **Author:** Aaron Johnson
@@ -7,18 +7,30 @@
 
 ## Summary
 
-This proposal consolidates several SDK and API behavior observations that affect the developer experience when working with ODP datasets.
+This proposal addresses cloud-native data access patterns in ODP Workspace. The goal is seamless in-notebook data access without explicit downloads - similar to how TABULAR datasets already work.
 
-## Issue 1: FILE Datasets Return Empty File Lists
+## The Ideal: TABULAR Access Pattern
 
-### Observed Behavior
+ODP's tabular access is excellent - truly cloud-native:
 
-Several datasets visible in the STAC catalog return empty lists when calling `dataset.files.list()`:
+```python
+# No download, no local files - direct cloud query
+df = dataset.table.select(
+    "temperature > 20",
+    vars={"region": bbox_wkt}
+).all(max_rows=10000).dataframe()
+```
+
+This is the gold standard: **query in cloud → get DataFrame**.
+
+## The Gap: FILE Dataset Access
+
+For FILE datasets, the equivalent cloud-native pattern is unclear:
 
 ```python
 ds = client.dataset("15dac249-4e3d-474b-a246-ba95cffc8807")  # GLODAP
-files = ds.files.list()
-print(len(files))  # Returns 0
+files = ds.files.list()  # Returns [] - empty
+# Now what?
 ```
 
 **Affected datasets:**
@@ -26,86 +38,112 @@ print(len(files))  # Returns 0
 - GEBCO Bathymetry (`5070af58-6d8a-4636-a6a0-8ca9298fb3ab`)
 - AkerBP Metocean data sharing
 
-### Expected Behavior
+These are visible in STAC with rich metadata, but SDK shows no accessible data.
 
-If a dataset is discoverable via STAC and contains files, `files.list()` should return those files (or raise a clear permissions error).
+---
 
-### Possible Causes
+## Cloud-Native Access Patterns
 
-1. **Permissions model**: STAC metadata is public, but file access requires additional permissions
-2. **External storage**: Files may be stored externally with only references in STAC assets
-3. **Access pattern mismatch**: SDK expects one storage model, dataset uses another
+### What STAC Spec Recommends
 
-### Questions for Discussion
+From the [STAC Best Practices](https://github.com/radiantearth/stac-spec/blob/master/best-practices.md):
 
-1. What determines whether `files.list()` returns results vs empty?
-2. Is there a way to check file access permissions before calling `files.list()`?
-3. Should the SDK raise an informative error instead of returning empty list?
-4. Can STAC assets provide direct download links as a fallback?
+| Format | Cloud-Native Access | Python Library |
+|--------|---------------------|----------------|
+| Cloud Optimized GeoTIFF (COG) | HTTP range requests | `rasterio`, `xarray` |
+| Zarr | Direct chunk access | `xarray`, `dask` |
+| GeoParquet | Direct read | `geopandas` |
+| NetCDF on S3 | fsspec streaming | `xarray` |
 
-### Proposed Solutions
+STAC assets provide `href` URLs that support streaming without full download.
 
-**Option A**: Return informative error when files exist but aren't accessible
+### Desired ODP Pattern for FILE Datasets
+
+**Option A: Streaming file handles**
 ```python
-files = ds.files.list()
-# If no files but STAC shows assets:
-# raise PermissionError("Files exist but require additional access")
+# Return file-like object for streaming
+with dataset.files.open(file_id) as f:
+    df = pd.read_csv(f)
+    # or
+    ds = xr.open_dataset(f)
 ```
 
-**Option B**: Document access patterns clearly
-- Which datasets support `files.list()` vs STAC asset downloads
-- Permission requirements for file access
-
-**Option C**: Unified access method
+**Option B: Direct integration with data libraries**
 ```python
-# Single method that tries SDK files, falls back to STAC assets
-files = ds.get_downloadable_files()
+# SDK returns URL/path that works with standard libraries
+href = dataset.files.get_href(file_id)
+ds = xr.open_dataset(href, engine='zarr')
+gdf = gpd.read_parquet(href)
+```
+
+**Option C: Cloud-optimized format detection**
+```python
+# SDK detects format and returns appropriate accessor
+accessor = dataset.files.open_cloud_native(file_id)
+# Returns xarray.Dataset for NetCDF/Zarr, GeoDataFrame for GeoParquet, etc.
+```
+
+**Option D: Expose STAC assets directly**
+```python
+# Access STAC asset hrefs when SDK files unavailable
+assets = dataset.stac_assets()
+for name, asset in assets.items():
+    print(f"{name}: {asset['href']} ({asset['type']})")
+
+# Use href directly with fsspec/xarray
+ds = xr.open_dataset(assets['data']['href'])
 ```
 
 ---
 
-## Issue 2: Inconsistent Dataset Type Detection
+## Questions for Discussion
 
-### Observed Behavior
+1. **What's the intended access pattern for FILE datasets in ODP Workspace?**
+   - Should users use `files.download()` and work locally?
+   - Or is there a streaming/cloud-native method we're missing?
 
-Some datasets that appear to contain tabular data show as FILE type:
+2. **Why do some datasets return empty file lists?**
+   - Permissions model (STAC public, files restricted)?
+   - Different storage backend?
+   - Data not yet ingested into ODP file system?
+
+3. **Could STAC assets bridge the gap?**
+   - If `files.list()` is empty, can we fall back to STAC asset hrefs?
+   - Are those hrefs accessible from within ODP Workspace?
+
+4. **What cloud-optimized formats does ODP support?**
+   - COG, Zarr, GeoParquet?
+   - Does ODP convert uploaded data to cloud-optimized formats?
+
+---
+
+## Related Issues
+
+### Inconsistent Dataset Type Detection
+
+Some datasets appear empty via SDK but have data in STAC:
 
 ```python
 ds = client.dataset(glodap_id)
 schema = ds.table.schema()  # Returns None
 files = ds.files.list()     # Returns []
-# Dataset appears empty but has data in STAC catalog
+# But STAC shows: title, bbox, temporal extent, keywords
 ```
 
-### Questions for Discussion
+**Question:** How is TABULAR vs FILE determined? Can a dataset support both?
 
-1. How is dataset type (TABULAR vs FILE) determined?
-2. Can a dataset have both tabular and file access?
-3. Should `schema()` return `None` or raise an error for non-tabular datasets?
-
----
-
-## Issue 3: STAC vs SDK Data Discrepancy
-
-### Observed Behavior
-
-The STAC API shows rich metadata for datasets that appear inaccessible via the Python SDK:
-
-- STAC shows: title, description, bbox, temporal extent, keywords
-- SDK shows: empty files, no schema
-
-### Proposed Improvement
-
-Provide SDK methods to access STAC metadata directly:
+### Suggested SDK Enhancement
 
 ```python
-ds = client.dataset(dataset_id)
-
-# Get STAC metadata even if SDK access is limited
-stac_meta = ds.stac_metadata()
-print(stac_meta['title'])
-print(stac_meta['extent'])
-print(stac_meta['assets'])  # Direct download links
+# Unified access check
+access = dataset.access_info()
+# Returns:
+# {
+#   'tabular': True/False,
+#   'files': {'count': N, 'accessible': True/False},
+#   'stac_assets': {'count': N, 'hrefs': [...]},
+#   'recommended_access': 'table.select()' | 'files.open()' | 'stac_assets'
+# }
 ```
 
 ---
@@ -117,13 +155,16 @@ print(stac_meta['assets'])  # Direct download links
 
 ## Impact
 
-Resolving these issues would:
-- Reduce confusion when discovering datasets
-- Enable clearer error messages for access issues
-- Improve the tutorial/onboarding experience
-- Help users understand which datasets they can actually use
+Clarifying cloud-native FILE access would:
+- Enable tutorials covering all ODP data types
+- Reduce confusion about empty file lists
+- Align with modern cloud data access patterns (no downloads)
+- Support large-scale analysis without local storage limits
 
 ## References
 
 - [ODP Python SDK](https://docs.hubocean.earth/python_sdk/intro/)
 - [STAC Specification](https://stacspec.org/)
+- [STAC Best Practices](https://github.com/radiantearth/stac-spec/blob/master/best-practices.md)
+- [fsspec - Filesystem interfaces for Python](https://filesystem-spec.readthedocs.io/)
+- [Cloud-Optimized GeoTIFF](https://www.cogeo.org/)
