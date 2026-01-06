@@ -1,5 +1,7 @@
 # Ocean Data Platform Workspaces
 
+> **Fork Note:** This is an enhanced fork of [C4IROcean/OceanDataPlatform](https://github.com/C4IROcean/OceanDataPlatform) featuring additional tutorial notebooks for real-world oceanographic analysis workflows, Claude Code skills for AI-assisted development, and a My Data API proposal.
+
 Welcome to Workspaces! A JupyterHub environment where you can directly access the ODP Catalog and datasets using our API. Packages for pulling data and analyzing data are already installed, so no need to spend time setting up the environment!
 
 Please find relevant notebooks to get you started and don't forget to check out our [documentation](https://docs.hubocean.earth/)
@@ -25,11 +27,19 @@ The examples cover the two types of data, Table (Tabular) and Files, that you wo
 | `03_data_pipeline.ipynb` | File ingest workflows |
 | `04_multi_dataset_join.ipynb` | Cross-dataset analysis |
 
-## Claude Code Skill
+## Claude Code Skills
 
-This repository includes a [Claude Code](https://claude.ai/code) skill for ODP documentation lookup. When working in Claude Code with this repo, the skill provides quick reference to SDK methods, STAC API endpoints, and documentation URLs.
+This repository includes [Claude Code](https://claude.ai/code) skills for AI-assisted ODP development:
 
-Location: `.claude/skills/hub-ocean-odp/SKILL.md`
+| Skill | Purpose |
+|-------|---------|
+| `hub-ocean-odp` | ODP documentation URLs, SDK quick reference |
+| `notebook-formatting` | Tutorial notebook conventions and templates |
+| `odp-dataset-patterns` | Tabular/file detection, upload, H3 aggregation |
+| `stac-api-reference` | STAC endpoints, search params, GeoJSON |
+| `odp-troubleshooting` | Common issues and solutions |
+
+Location: `.claude/skills/`
 
 <br><br>
 
