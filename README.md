@@ -22,7 +22,7 @@ The examples cover the two types of data, Table (Tabular) and Files, that you wo
 |----------|-------------|
 | `01_catalog_discovery.ipynb` | Discover datasets via STAC API |
 | `02_geospatial_analysis.ipynb` | H3 hexagonal aggregation and mapping |
-| `03_data_pipeline.ipynb` | File ingest workflows *(coming soon)* |
+| `03_data_pipeline.ipynb` | File ingest workflows |
 | `04_multi_dataset_join.ipynb` | Cross-dataset analysis *(coming soon)* |
 
 ## Claude Code Skill
