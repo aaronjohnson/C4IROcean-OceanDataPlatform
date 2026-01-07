@@ -8,13 +8,28 @@
 
 ## Summary
 
-STAC catalog contains datasets but doesn't indicate access type (TABULAR vs FILE). Users must probe each dataset via SDK to determine if it's queryable. This creates a discovery gap where users see metadata but can't efficiently find usable data.
+STAC catalog contains **3,774 items** but returns only 10 per page by default, and doesn't indicate access type (TABULAR vs FILE). Users must paginate through all items and probe each via SDK to find queryable data. This creates a significant discovery gap.
 
 ## Key Findings
 
-### Finding 1: TABULAR Datasets ARE in STAC (Updated)
+### Finding 1: STAC Has 3,774 Items (Pagination Issue)
 
-Initial investigation found 35 collections returning empty. Further probing discovered **50+ TABULAR datasets** in Norwegian waters:
+The STAC search endpoint returns **3,774 total items** but only **10 per page by default**:
+
+```python
+# GET https://api.hubocean.earth/api/stac/search
+{
+  "numberMatched": 3774,
+  "numberReturned": 10,  # Default limit!
+  "links": [{"rel": "next", "href": "...?limit=10&offset=10"}]
+}
+```
+
+Initial investigation only saw first page, missing 99.7% of catalog.
+
+### Finding 2: TABULAR Datasets ARE in STAC
+
+Further probing discovered **50+ TABULAR datasets** in Norwegian waters:
 
 ```
 Aker BP Metocean Data - Alvheim - Air THP Data - Air Dewpoint Temperature: TABULAR
@@ -24,9 +39,11 @@ Aker BP Metocean Data - Alvheim - Air THP Data - Air Humidity: TABULAR
 ... (50+ datasets)
 ```
 
-**Key insight:** TABULAR data exists and IS discoverable via STAC - but requires probing each dataset with SDK to determine type.
+**Key insight:** TABULAR data exists and IS discoverable via STAC - but requires:
+1. Paginating through all 3,774 items
+2. Probing each with SDK to determine type
 
-### Finding 2: No Access Type Indicator in STAC
+### Finding 3: No Access Type Indicator in STAC
 
 STAC metadata doesn't indicate whether a dataset is:
 - **TABULAR** (queryable via `dataset.table.select()`)
@@ -44,7 +61,7 @@ else:
     print("Empty/No access")
 ```
 
-### Finding 3: Mixed Results Across Collections
+### Finding 4: Mixed Results Across Items
 
 | Category | Count | Example |
 |----------|-------|---------|
@@ -52,7 +69,7 @@ else:
 | FILE (0 files) | ~30 | GLODAP, GEBCO |
 | TABULAR (not in STAC) | 1+ | PGS Brazil Biota |
 
-### Finding 4: Dual UUIDs Pattern
+### Finding 5: Dual UUIDs Pattern
 
 Some datasets have two UUIDs with different access patterns:
 
@@ -81,22 +98,25 @@ Geographic extent       →    What columns are available?
 
 ## Impact
 
-1. **Discovery inefficient** - Must probe each dataset individually
-2. **Tutorials complex** - Need to include type-detection logic
-3. **API roundtrips** - N+1 queries to discover N usable datasets
-4. **UX friction** - Users can't filter by "datasets I can query"
+1. **Scale hidden** - Default pagination hides 99.7% of catalog (10 of 3,774)
+2. **Discovery expensive** - Must paginate 378 pages, then probe each item via SDK
+3. **API roundtrips** - 378 + 3,774 = 4,152 requests to fully discover catalog
+4. **No filtering** - Can't query "give me all TABULAR items" directly
+5. **UX friction** - Users see 10 items and assume that's all there is
 
 ## Questions for Discussion
 
-1. **Can STAC include access type?** A simple `odp:access_type: "tabular"` property would solve this.
+1. **Can pagination default be increased?** Returning 10 of 3,774 items hides the catalog's scale.
 
-2. **Why do some FILE datasets return 0 files?** GLODAP, GEBCO show in STAC but `files.list()` returns empty.
+2. **Can STAC include access type?** A simple `odp:access_type: "tabular"` property would enable filtering.
 
-3. **Why are some TABULAR datasets not in STAC?** PGS Biota TABULAR UUID returns 404 from STAC.
+3. **Why do some FILE datasets return 0 files?** GLODAP, GEBCO show in STAC but `files.list()` returns empty.
 
-4. **Is dual UUID intentional?** Same data with FILE and TABULAR UUIDs seems confusing.
+4. **Why are some TABULAR datasets not in STAC?** PGS Biota TABULAR UUID returns 404 from STAC.
 
-5. **Can SDK provide discovery?** A `client.list_datasets(type="tabular")` would be valuable.
+5. **Is dual UUID intentional?** Same data with FILE and TABULAR UUIDs seems confusing.
+
+6. **Can SDK provide discovery?** A `client.list_datasets(type="tabular")` would be valuable.
 
 ## Proposed Solutions
 
@@ -160,15 +180,36 @@ New API endpoint returning access types for all collections:
 }
 ```
 
-## Workaround: Client-Side Type Detection
+## Workaround: Paginated Discovery with Type Detection
 
-Until a solution is implemented, tutorials use this pattern:
+Until a solution is implemented, tutorials must handle pagination and probe each item:
 
 ```python
-def probe_dataset_type(client, collection_id):
+import requests
+from odp.client import Client
+
+STAC_URL = "https://api.hubocean.earth/api/stac"
+client = Client()
+
+def get_all_stac_items(limit=100):
+    """Paginate through all STAC items."""
+    items = []
+    offset = 0
+    while True:
+        resp = requests.get(f"{STAC_URL}/search", params={"limit": limit, "offset": offset})
+        data = resp.json()
+        features = data.get("features", [])
+        if not features:
+            break
+        items.extend(features)
+        offset += limit
+        print(f"Fetched {len(items)} of {data.get('numberMatched', '?')} items...")
+    return items
+
+def probe_dataset_type(client, item_id):
     """Probe a dataset to determine its access type."""
     try:
-        ds = client.dataset(collection_id)
+        ds = client.dataset(item_id)
         schema = ds.table.schema()
         if schema:
             stats = ds.table.stats()
@@ -184,11 +225,18 @@ def probe_dataset_type(client, collection_id):
     except Exception as e:
         return {"type": "error", "message": str(e)}
 
-# Probe all STAC collections
-for coll in collections:
-    info = probe_dataset_type(client, coll['id'])
+# Full discovery (warning: 4000+ API calls)
+items = get_all_stac_items()
+print(f"Total items: {len(items)}")
+
+tabular_datasets = []
+for item in items:
+    info = probe_dataset_type(client, item['id'])
     if info['type'] == 'tabular':
-        print(f"{coll['title']}: {info['rows']} rows")
+        tabular_datasets.append((item, info))
+        print(f"TABULAR: {item['properties'].get('title', item['id'])}")
+
+print(f"Found {len(tabular_datasets)} TABULAR datasets")
 ```
 
 ## Known Working Datasets
