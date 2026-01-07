@@ -118,6 +118,27 @@ Geographic extent       →    What columns are available?
 
 6. **Can SDK provide discovery?** A `client.list_datasets(type="tabular")` would be valuable.
 
+## Observation: TABULAR vs FILE for Cloud-Native Workflows
+
+In our exploration, TABULAR access appears better suited for cloud-native use in ODP Workspaces:
+
+```python
+# TABULAR: server-side query, only matching rows transferred
+df = dataset.table.select("temperature > 20").all().dataframe()
+```
+
+```python
+# FILE: currently requires full download
+data = b''.join(dataset.files.download(file_id))
+```
+
+**Questions this raises:**
+- Is TABULAR the intended pattern for cloud-native ODP use?
+- For FILE datasets (GLODAP, GEBCO) returning 0 files - is there a different access method we're missing?
+- Are there plans for streaming/partial FILE access?
+
+We may be misunderstanding the intended use of FILE vs TABULAR - guidance from the ODP team would be helpful.
+
 ## Proposed Solutions
 
 ### Option A: STAC Access Type Property (Recommended)
