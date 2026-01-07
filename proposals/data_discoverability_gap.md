@@ -3,120 +3,123 @@
 **Status:** Discussion
 **Author:** Aaron Johnson
 **Date:** 2026-01-06
+**Updated:** 2026-01-06 (TABULAR discovered in STAC)
 **Related:** `tutorials/01_catalog_discovery.ipynb`, `tutorials/02_geospatial_analysis.ipynb`
 
 ## Summary
 
-The STAC catalog does not reflect actual data accessibility in ODP. Users discover datasets via STAC but cannot access the data - meanwhile, accessible TABULAR datasets exist but are not discoverable via STAC or SDK.
+STAC catalog contains datasets but doesn't indicate access type (TABULAR vs FILE). Users must probe each dataset via SDK to determine if it's queryable. This creates a discovery gap where users see metadata but can't efficiently find usable data.
 
 ## Key Findings
 
-### Finding 1: STAC Shows FILE, SDK Returns Empty
+### Finding 1: TABULAR Datasets ARE in STAC (Updated)
 
-All 35 STAC collections appear as FILE type via SDK, but with 0 accessible files:
+Initial investigation found 35 collections returning empty. Further probing discovered **50+ TABULAR datasets** in Norwegian waters:
 
-```python
-ds = client.dataset(stac_collection_id)
-schema = ds.table.schema()  # None
-files = ds.files.list()     # []
+```
+Aker BP Metocean Data - Alvheim - Air THP Data - Air Dewpoint Temperature: TABULAR
+    Columns: ['timestamp', 'value']
+Aker BP Metocean Data - Alvheim - Air THP Data - Air Humidity: TABULAR
+    Columns: ['timestamp', 'value']
+... (50+ datasets)
 ```
 
-**Affected datasets:**
-- GLODAP (`15dac249-4e3d-474b-a246-ba95cffc8807`)
-- GEBCO Bathymetry (`5070af58-6d8a-4636-a6a0-8ca9298fb3ab`)
-- AkerBP Metocean, and 32 others
+**Key insight:** TABULAR data exists and IS discoverable via STAC - but requires probing each dataset with SDK to determine type.
 
-### Finding 2: TABULAR Exists But Not Discoverable
+### Finding 2: No Access Type Indicator in STAC
 
-Probed all 35 STAC collections - none provide TABULAR access. However, a TABULAR dataset exists that works via SDK:
+STAC metadata doesn't indicate whether a dataset is:
+- **TABULAR** (queryable via `dataset.table.select()`)
+- **FILE** (downloadable via `dataset.files.list()`)
+- **Empty** (metadata only, no accessible data)
 
-| Metric | Result |
-|--------|--------|
-| STAC collections | 35 |
-| TABULAR via STAC UUIDs | 0 |
-| FILE via STAC UUIDs | 35 (all 0 files) |
-| Known TABULAR UUID | 1 confirmed (2,241 rows) |
-
+Users must call SDK for each dataset to determine:
 ```python
-# This UUID is NOT in STAC (returns 404)
-# But works via SDK as TABULAR
-ds = client.dataset("1d801817-742b-4867-82cf-5597673524eb")
-ds.table.schema()       # Returns schema!
-ds.table.stats()        # 2,241 rows
+ds = client.dataset(collection_id)
+if ds.table.schema():
+    print("TABULAR")
+elif ds.files.list():
+    print("FILE")
+else:
+    print("Empty/No access")
 ```
 
-**How was this UUID found?** Unknown - it was pre-existing in tutorial code. Possible sources:
-- Web UI catalog (app.hubocean.earth/catalog)
-- Direct communication with ODP team
-- Previous documentation
+### Finding 3: Mixed Results Across Collections
 
-**Are there more?** Unknown - no programmatic way to discover. If PGS Biota has a TABULAR UUID, other datasets might too.
+| Category | Count | Example |
+|----------|-------|---------|
+| TABULAR (queryable) | 50+ | Aker BP Metocean time series |
+| FILE (0 files) | ~30 | GLODAP, GEBCO |
+| TABULAR (not in STAC) | 1+ | PGS Brazil Biota |
 
-### Finding 3: Dual UUIDs for Same Data
+### Finding 4: Dual UUIDs Pattern
 
-Same dataset can have two UUIDs with different access patterns:
+Some datasets have two UUIDs with different access patterns:
 
 | UUID | STAC | SDK Type | Access |
 |------|------|----------|--------|
-| `1d801817-742b-4867-82cf-5597673524eb` | 404 | TABULAR | 2,241 rows ✓ |
+| `1d801817-742b-4867-82cf-5597673524eb` | 404 | TABULAR | 2,241 rows |
 | `b960c80e-7ead-47af-b6c8-e92a9b5ac659` | Yes | FILE | 0 files |
 
 Both refer to PGS Brazil Biota data.
 
-## The Gap
+## The Real Gap
 
 ```
-What STAC Shows          What's Actually Accessible
-─────────────────        ─────────────────────────
-35 FILE datasets    →    0 accessible files
-0 TABULAR datasets  →    1+ TABULAR with data (hidden UUIDs)
+What STAC Shows              What Users Need to Know
+─────────────────            ──────────────────────
+Collection metadata     →    Is this TABULAR or FILE?
+Title, description      →    Can I query it? How many rows?
+Geographic extent       →    What columns are available?
 ```
 
 **User Experience:**
-1. Browse STAC catalog → finds 35 datasets
-2. Try to access data → all return empty
-3. Conclude ODP has no usable public data
-4. Miss hidden TABULAR datasets entirely
+1. Browse STAC catalog → finds 80+ datasets
+2. No indication which are queryable vs file-based
+3. Must probe each via SDK to find usable data
+4. Time-consuming trial and error
 
 ## Impact
 
-1. **New users blocked** - Cannot discover any queryable data
-2. **Tutorials fail** - Dynamic discovery returns nothing usable
-3. **Value hidden** - ODP's tabular query capabilities undiscoverable
-4. **Documentation fragile** - Must hardcode UUIDs that aren't in STAC
+1. **Discovery inefficient** - Must probe each dataset individually
+2. **Tutorials complex** - Need to include type-detection logic
+3. **API roundtrips** - N+1 queries to discover N usable datasets
+4. **UX friction** - Users can't filter by "datasets I can query"
 
 ## Questions for Discussion
 
-1. **Why are FILE datasets empty?** Is this permissions, storage backend, or access pattern?
+1. **Can STAC include access type?** A simple `odp:access_type: "tabular"` property would solve this.
 
-2. **Why aren't TABULAR datasets in STAC?** Is this intentional (private data) or a gap in catalog population?
+2. **Why do some FILE datasets return 0 files?** GLODAP, GEBCO show in STAC but `files.list()` returns empty.
 
-3. **How many TABULAR datasets exist?** We confirmed one, but there may be more that users can't discover.
+3. **Why are some TABULAR datasets not in STAC?** PGS Biota TABULAR UUID returns 404 from STAC.
 
-4. **What's the relationship between UUIDs?** Can users discover TABULAR UUID from FILE UUID? Is there an internal link?
+4. **Is dual UUID intentional?** Same data with FILE and TABULAR UUIDs seems confusing.
 
-5. **Is there an API we're missing?** Perhaps `client.list_datasets(type="tabular")`? The web UI catalog seems to show more.
-
-6. **Should STAC reflect accessibility?** Either include TABULAR UUIDs or indicate FILE access requirements.
-
-7. **How was the known UUID originally discovered?** Understanding this helps users find more.
+5. **Can SDK provide discovery?** A `client.list_datasets(type="tabular")` would be valuable.
 
 ## Proposed Solutions
 
-### Option A: Expose TABULAR in STAC
+### Option A: STAC Access Type Property (Recommended)
 
-Add TABULAR datasets to catalog:
+Add access type to STAC metadata:
 
 ```json
 {
-  "id": "pgs-biota-tabular",
-  "title": "PGS Brazil Biota (Tabular)",
+  "id": "aker-bp-metocean-alvheim-temp",
+  "title": "Aker BP Metocean - Air Temperature",
   "properties": {
     "odp:access_type": "tabular",
-    "odp:row_count": 2241
+    "odp:row_count": 52560,
+    "odp:columns": ["timestamp", "value"]
   }
 }
 ```
+
+Benefits:
+- Filter in STAC queries: `properties.odp:access_type=tabular`
+- No SDK roundtrip needed for discovery
+- Follows STAC extension pattern
 
 ### Option B: SDK Discovery Method
 
@@ -124,132 +127,85 @@ Add TABULAR datasets to catalog:
 # Discover all accessible datasets by type
 tabular = client.list_datasets(type="tabular")
 files = client.list_datasets(type="file", accessible=True)
+
+# Or with schema preview
+for ds in client.list_datasets(type="tabular"):
+    print(f"{ds.title}: {ds.columns}")
 ```
 
-### Option C: Unified Dataset View
+### Option C: STAC Search Extension
+
+Enable filtering by access type in STAC search:
 
 ```python
-ds = client.dataset(any_uuid)
-print(ds.access_types)      # ['tabular', 'file']
-print(ds.tabular_uuid)      # For tabular access
-print(ds.file_uuid)         # For file access
-print(ds.is_accessible)     # True/False
+# STAC API search
+response = requests.post(f"{STAC_URL}/search", json={
+    "filter": {
+        "op": "=",
+        "args": [{"property": "odp:access_type"}, "tabular"]
+    }
+})
 ```
 
-### Option D: STAC Access Metadata
+### Option D: Bulk Type Endpoint
 
-Add accessibility info to STAC:
+New API endpoint returning access types for all collections:
 
-```json
+```python
+# GET /api/collections/types
 {
-  "properties": {
-    "odp:tabular_accessible": true,
-    "odp:tabular_uuid": "1d801817-...",
-    "odp:file_accessible": false,
-    "odp:access_requirements": "Contact data owner"
-  }
+  "uuid-1": {"type": "tabular", "rows": 52560},
+  "uuid-2": {"type": "file", "files": 12},
+  "uuid-3": {"type": "empty"}
 }
 ```
 
-### Option E: Documentation
+## Workaround: Client-Side Type Detection
 
-If current behavior is intentional:
-- Document which UUIDs provide TABULAR access
-- Explain FILE vs TABULAR UUID relationship
-- Clarify access requirements for each dataset
-
-## SDK Investigation
-
-The SDK was explored for discovery methods:
+Until a solution is implemented, tutorials use this pattern:
 
 ```python
-# SDK client has minimal methods
-dir(client)  # → ['base_url', 'dataset', 'request']
+def probe_dataset_type(client, collection_id):
+    """Probe a dataset to determine its access type."""
+    try:
+        ds = client.dataset(collection_id)
+        schema = ds.table.schema()
+        if schema:
+            stats = ds.table.stats()
+            return {
+                "type": "tabular",
+                "columns": [f.name for f in schema],
+                "rows": stats.num_rows if stats else None
+            }
+        files = ds.files.list()
+        if files:
+            return {"type": "file", "files": len(files)}
+        return {"type": "empty"}
+    except Exception as e:
+        return {"type": "error", "message": str(e)}
 
-# Only method is dataset(id) - requires knowing UUID
-client.dataset(id: str) -> Dataset
-
-# Tried probing API endpoints via request()
-endpoints = ['/catalog', '/datasets', '/data/catalogue', '/']
-# All return 404
-```
-
-**SDK Documentation confirms this is by design:**
-
-> "Normally you will use the web UI [here](https://app.hubocean.earth/catalog) to find the dataset you want to work with, and then likely use the dataset ID to access it in the SDK"
-
-Source: https://docs.hubocean.earth/python_sdk/intro/
-
-**Conclusion:** No programmatic discovery via SDK (by design). Users must:
-1. Use web UI (https://app.hubocean.earth/catalog) - **recommended by docs**
-2. Use STAC API (but TABULAR not included, FILE shows 0 files)
-3. Know UUID in advance
-
-**Gap:** The docs point to web UI, but many users expect STAC to be the discovery mechanism. STAC doesn't reflect what's actually accessible.
-
-## Known UUIDs to Try
-
-These UUIDs can be used to reproduce findings:
-
-### Working TABULAR (not in STAC)
-| UUID | Dataset | Rows |
-|------|---------|------|
-| `1d801817-742b-4867-82cf-5597673524eb` | PGS Brazil Biota | 2,241 |
-
-### FILE via STAC (all return 0 files)
-| UUID | Dataset |
-|------|---------|
-| `b960c80e-7ead-47af-b6c8-e92a9b5ac659` | PGS Brazil Biota (FILE view) |
-| `15dac249-4e3d-474b-a246-ba95cffc8807` | GLODAP |
-| `5070af58-6d8a-4636-a6a0-8ca9298fb3ab` | GEBCO Bathymetry |
-
-```python
-# Quick test
-from odp.client import Client
-client = Client()
-
-# TABULAR access (works)
-tabular = client.dataset("1d801817-742b-4867-82cf-5597673524eb")
-print(f"TABULAR schema: {tabular.table.schema() is not None}")
-print(f"TABULAR rows: {tabular.table.stats().num_rows}")
-
-# FILE access (returns empty)
-file_ds = client.dataset("b960c80e-7ead-47af-b6c8-e92a9b5ac659")
-print(f"FILE schema: {file_ds.table.schema()}")  # None
-print(f"FILE files: {len(file_ds.files.list())}")  # 0
-```
-
-## Reproduction Steps
-
-```python
-from odp.client import Client
-import requests
-
-client = Client()
-STAC_URL = "https://api.hubocean.earth/api/stac"
-
-# 1. Get all STAC collections
-collections = requests.get(f"{STAC_URL}/collections").json()['collections']
-print(f"STAC collections: {len(collections)}")
-
-# 2. Probe each for actual access
-tabular, file_with_data, empty = 0, 0, 0
+# Probe all STAC collections
 for coll in collections:
-    ds = client.dataset(coll['id'])
-    if ds.table.schema():
-        tabular += 1
-    elif ds.files.list():
-        file_with_data += 1
-    else:
-        empty += 1
-
-print(f"TABULAR: {tabular}, FILE w/data: {file_with_data}, Empty: {empty}")
-# Result: TABULAR: 0, FILE w/data: 0, Empty: 35
-
-# 3. But hidden TABULAR exists
-ds = client.dataset("1d801817-742b-4867-82cf-5597673524eb")
-print(f"Hidden TABULAR: {ds.table.stats().num_rows} rows")  # 2241
+    info = probe_dataset_type(client, coll['id'])
+    if info['type'] == 'tabular':
+        print(f"{coll['title']}: {info['rows']} rows")
 ```
+
+## Known Working Datasets
+
+### TABULAR (queryable)
+| Dataset | Schema |
+|---------|--------|
+| Aker BP Metocean (50+ sensors) | `['timestamp', 'value']` |
+| PGS Brazil Biota* | Marine mammal observations |
+
+*Not in STAC - requires known UUID: `1d801817-742b-4867-82cf-5597673524eb`
+
+### FILE (0 files via SDK)
+| Dataset | Notes |
+|---------|-------|
+| GLODAP | Metadata only? |
+| GEBCO Bathymetry | Metadata only? |
 
 ## Related
 
@@ -261,4 +217,4 @@ print(f"Hidden TABULAR: {ds.table.stats().num_rows} rows")  # 2241
 
 - [ODP Python SDK](https://docs.hubocean.earth/python_sdk/intro/)
 - [STAC Specification](https://stacspec.org/)
-- [STAC Best Practices](https://github.com/radiantearth/stac-spec/blob/master/best-practices.md)
+- [STAC Extensions](https://stac-extensions.github.io/)
