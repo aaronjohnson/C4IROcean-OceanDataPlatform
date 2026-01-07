@@ -10,6 +10,7 @@ These notebooks demonstrate real-world analysis workflows on the Ocean Data Plat
 | [02_geospatial_analysis.ipynb](02_geospatial_analysis.ipynb) | Query and visualize data with H3 hexagonal aggregation |
 | [03_data_pipeline.ipynb](03_data_pipeline.ipynb) | Ingest files and transform into tabular data |
 | [04_multi_dataset_join.ipynb](04_multi_dataset_join.ipynb) | Combine multiple datasets for analysis |
+| [05_dask_distributed_processing.ipynb](05_dask_distributed_processing.ipynb) | Parallel processing with Dask in ODP Workspaces |
 
 ## Prerequisites
 

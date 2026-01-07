@@ -144,6 +144,12 @@ Resolving this would enable:
 - Interactive dashboards with live H3 queries
 - Scalable spatial analysis workflows in ODP Workspace
 
+## Related
+
+- `proposals/data_discoverability_gap.md` - Related SDK observations
+- `tutorials/02_geospatial_analysis.ipynb` - Tutorial demonstrating client-side workaround
+- `.claude/skills/odp-troubleshooting/` - Documented workarounds including H3 v3/v4 API
+
 ## References
 
 - [H3 Documentation](https://h3geo.org/docs/)

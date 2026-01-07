@@ -278,6 +278,7 @@ print(f"Found {len(tabular_datasets)} TABULAR datasets")
 
 ## Related
 
+- `proposals/sdk_batch_metadata.md` - Batch count for Dask integration
 - `proposals/server_side_h3_aggregation.md` - Server-side aggregation features
 - `proposals/my_data_api.md` - Programmatic dataset creation
 - `.claude/skills/odp-troubleshooting/` - Workarounds documented

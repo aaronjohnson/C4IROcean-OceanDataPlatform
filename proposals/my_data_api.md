@@ -166,8 +166,13 @@ Extend STAC `/collections` to include personal datasets with auth filter.
 
 Fully backward compatible - adds new methods without changing existing API.
 
+## Related
+
+- `proposals/data_discoverability_gap.md` - Dataset discovery challenges
+- `tutorials/03_data_pipeline.ipynb` - Data pipeline tutorial using manual UUID entry
+- `.claude/skills/odp-dataset-patterns/` - Dataset patterns and workarounds
+
 ## References
 
 - Current SDK docs: https://docs.hubocean.earth/python_sdk/intro/
 - My Data web UI: https://app.hubocean.earth/
-- Related tutorial: `tutorials/03_data_pipeline.ipynb`
