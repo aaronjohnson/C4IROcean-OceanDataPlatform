@@ -26,6 +26,7 @@ The examples cover the two types of data, Table (Tabular) and Files, that you wo
 | `02_geospatial_analysis.ipynb` | H3 hexagonal aggregation and mapping |
 | `03_data_pipeline.ipynb` | File ingest workflows |
 | `04_multi_dataset_join.ipynb` | Cross-dataset analysis |
+| `05_dask_distributed_processing.ipynb` | Dask parallel processing in ODP Workspaces |
 
 ## Claude Code Skills
 

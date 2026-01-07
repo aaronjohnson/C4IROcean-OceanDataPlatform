@@ -221,6 +221,6 @@ client.close()
 
 ## Related
 
-- `tutorials/drafts/05_dask_distributed_processing.ipynb` - Full tutorial
+- `tutorials/05_dask_distributed_processing.ipynb` - Full tutorial
 - `proposals/sdk_batch_metadata.md` - Proposal for SDK batch count API
 - [Dask Best Practices](https://docs.dask.org/en/stable/best-practices.html)

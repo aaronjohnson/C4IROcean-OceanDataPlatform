@@ -3,7 +3,7 @@
 **Status:** Discussion
 **Author:** Aaron Johnson
 **Date:** 2026-01-06
-**Related:** `tutorials/drafts/05_dask_distributed_processing.ipynb`, `.claude/skills/dask-odp-patterns/`
+**Related:** `tutorials/05_dask_distributed_processing.ipynb`, `.claude/skills/dask-odp-patterns/`
 
 ## Summary
 
@@ -168,7 +168,7 @@ final = dd.from_delayed(results).compute()
 ## Related
 
 - `.claude/skills/dask-odp-patterns/` - Dask integration patterns
-- `tutorials/drafts/05_dask_distributed_processing.ipynb` - Dask tutorial
+- `tutorials/05_dask_distributed_processing.ipynb` - Dask tutorial
 - `proposals/data_discoverability_gap.md` - Related SDK observations
 
 ## Industry Context
