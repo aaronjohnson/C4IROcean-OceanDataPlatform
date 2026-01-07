@@ -147,6 +147,27 @@ If current behavior is intentional:
 - Explain FILE vs TABULAR UUID relationship
 - Clarify access requirements for each dataset
 
+## SDK Investigation
+
+The SDK was explored for discovery methods:
+
+```python
+# SDK client has minimal methods
+dir(client)  # → ['base_url', 'dataset', 'request']
+
+# Only method is dataset(id) - requires knowing UUID
+client.dataset(id: str) -> Dataset
+
+# Tried probing API endpoints via request()
+endpoints = ['/catalog', '/datasets', '/data/catalogue', '/']
+# All return 404
+```
+
+**Conclusion:** No programmatic discovery via SDK. Users must:
+1. Use STAC (but TABULAR hidden)
+2. Use web UI (https://app.hubocean.earth/catalog)
+3. Know UUID in advance
+
 ## Reproduction Steps
 
 ```python
