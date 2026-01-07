@@ -230,6 +230,31 @@ df_filtered = dataset.table.select(
 ).all().dataframe()
 ```
 
+### Issue: Cannot Update mime-type After Upload
+
+**Symptom:** `ValueError: Cannot update field 'mime-type'`
+
+**Cause:** The `mime-type` field is set at upload time and is immutable.
+
+**Solution:** Only update mutable fields:
+```python
+# Wrong - mime-type cannot be changed
+dataset.files.update_meta(file_id, {
+    "name": filename,
+    "mime-type": "text/csv",  # ERROR: immutable
+    "geometry": bbox_wkt
+})
+
+# Correct - only update mutable fields
+dataset.files.update_meta(file_id, {
+    "name": filename,
+    "geometry": bbox_wkt
+})
+```
+
+**Mutable fields:** `name`, `geometry`
+**Immutable fields:** `mime-type`, `id`, `size`
+
 ### Issue: File Upload Succeeds but Ingest Fails
 
 **Symptom:** `files.upload()` works but `files.ingest()` errors
