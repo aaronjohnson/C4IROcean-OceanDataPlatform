@@ -70,8 +70,9 @@ if schema is None:
 - GEBCO (`5070af58-6d8a-4636-a6a0-8ca9298fb3ab`) - shows as FILE
 
 **Known working TABULAR datasets:**
-- PGS Brazil Biota (`b960c80e-7ead-47af-b6c8-e92a9b5ac659`) - marine mammals/turtles
-  - Note: Previously `1d801817-742b-4867-82cf-5597673524eb` (UUID changed 2026-01)
+- PGS Brazil Biota (`1d801817-742b-4867-82cf-5597673524eb`) - marine mammals/turtles
+  - Note: This UUID is not in STAC catalog (discovered via web UI or prior docs)
+  - FILE UUID in STAC: `b960c80e-7ead-47af-b6c8-e92a9b5ac659` (returns 0 files)
 
 ### Issue: FILE Dataset Returns 0 Files
 
