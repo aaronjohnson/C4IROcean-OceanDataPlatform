@@ -39,6 +39,7 @@ This repository includes [Claude Code](https://claude.ai/code) skills for AI-ass
 | `stac-api-reference` | STAC endpoints, search params, GeoJSON |
 | `odp-troubleshooting` | Common issues and solutions |
 | `proposal-writing` | When and how to write discussion proposals |
+| `dask-odp-patterns` | Dask distributed processing for ODP cloud workflows |
 
 Location: `.claude/skills/`
 
